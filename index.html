@@ -3,91 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>রহিম এআই ম্যানেজার - Rahim AI Clone</title>
+    <title>AI Clone Business - Rahim AI</title>
     <style>
-        /* ওয়েবসাইটের সাজসজ্জা */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0f172a;
             color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
         }
         .container {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 40px;
+            background: #1e293b;
+            padding: 30px;
             border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 500px;
             text-align: center;
-            border: 1px solid rgba(255,255,255,0.2);
-            width: 90%;
-            max-width: 400px;
         }
-        h1 { font-size: 24px; margin-bottom: 20px; }
+        h1 { color: #38bdf8; margin-bottom: 10px; }
         textarea {
             width: 100%;
-            height: 120px;
+            height: 100px;
             border-radius: 10px;
             padding: 15px;
             border: none;
+            margin: 20px 0;
             font-size: 16px;
-            margin-bottom: 20px;
-            box-sizing: border-box;
         }
-        button {
-            background: #ff416c;
-            background: -webkit-linear-gradient(to right, #ff4b2b, #ff416c);
-            background: linear-gradient(to right, #ff4b2b, #ff416c);
-            color: white;
+        .btn-main {
+            background: #38bdf8;
+            color: #0f172a;
             border: none;
             padding: 15px 30px;
             font-size: 18px;
             font-weight: bold;
             border-radius: 50px;
             cursor: pointer;
-            transition: 0.3s;
-            box-shadow: 0 5px 15px rgba(255, 65, 108, 0.4);
+            width: 100%;
         }
-        button:hover { transform: scale(1.05); }
-        .footer { margin-top: 20px; font-size: 12px; opacity: 0.7; }
+        .pricing-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #334155;
+        }
+        .price-card {
+            background: #334155;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 15px;
+        }
+        .btn-pay {
+            background: #22c55e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .bkash-btn { background: #e2136e; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>🤖 রহিম এআই ম্যানেজার</h1>
-        <p>আপনার যা খুশি লিখুন, এআই তা আপনার হয়ে বলে দিবে!</p>
+        <h1>🤖 Rahim AI Clone</h1>
+        <p>আপনার গলার স্বর এবং এআই ম্যানেজার তৈরি করুন</p>
         
-        <textarea id="inputText" placeholder="এখানে বাংলায় বা ইংরেজিতে লিখুন..."></textarea>
-        <br>
-        <button onclick="speak()">এআই ভয়েস চালু করুন</button>
+        <textarea id="inputText" placeholder="আপনার এআই এখন কী বলবে? এখানে লিখুন..."></textarea>
+        <button class="btn-main" onclick="speak()">টেস্ট ভয়েস শুনুন</button>
 
-        <div class="footer">
-            Powered by Rahim's 1000GB Brain & Gemini AI
+        <div class="pricing-section">
+            <h3>💎 প্রিমিয়াম সার্ভিস কিনুন</h3>
+            
+            <div class="price-card">
+                <h4>Global Business Plan</h4>
+                <p>সব ভাষায় ফোন কল এবং ভয়েস ক্লোনিং</p>
+                <p style="font-size: 24px; color: #38bdf8;">$49 / Month</p>
+                <button class="btn-pay" onclick="payStripe()">Pay with Card (Stripe)</button>
+            </div>
+
+            <div class="price-card">
+                <h4>বাংলাদেশী স্পেশাল প্ল্যান</h4>
+                <p>ডাক্তার ও ব্যবসায়ীদের জন্য এআই ম্যানেজার</p>
+                <p style="font-size: 24px; color: #e2136e;">৫,০০০ টাকা / মাস</p>
+                <button class="btn-pay bkash-btn" onclick="payBkash()">বিকাশ / নগদ দিয়ে কিনুন</button>
+            </div>
         </div>
+
+        <p style="font-size: 12px; margin-top: 20px; opacity: 0.5;">Powered by 1000GB Rahim Brain</p>
     </div>
 
     <script>
-        // কথা বলার আসল জাদুকরী কোড
+        // ভয়েস ফাংশন
         function speak() {
             const text = document.getElementById('inputText').value;
-            if (text.trim() === "") {
-                alert("বাবা, আগে কিছু তো লিখুন!");
-                return;
-            }
-
-            // ব্রাউজারের নিজস্ব এআই ভয়েস ইঞ্জিন ব্যবহার করা হয়েছে
+            if(!text) return alert("কিছু লিখুন বাবা!");
             const msg = new SpeechSynthesisUtterance();
             msg.text = text;
-            msg.lang = 'bn-BD'; // বাংলা ভাষা সেট করা হয়েছে
-            msg.rate = 0.9;     // কথা বলার গতি
-            msg.pitch = 1;      // কণ্ঠের টান
-
+            msg.lang = 'bn-BD';
             window.speechSynthesis.speak(msg);
+        }
+
+        // পেমেন্ট গেটওয়ে কানেকশন (নমুনা)
+        function payStripe() {
+            alert("আপনাকে এখন Stripe ইন্টারন্যাশনাল পেমেন্ট পেজে নিয়ে যাওয়া হচ্ছে...");
+            // এখানে আপনার Stripe পেমেন্ট লিঙ্কটি বসাতে হবে
+            window.location.href = "https://stripe.com"; 
+        }
+
+        function payBkash() {
+            alert("বিকাশ নম্বর: ০১৯১৭৭৬৯৯৯২ - এখানে 'Send Money' করে ট্রানজেকশন আইডি দিন।");
+            // এখানে সরাসরি বিকাশের লিঙ্ক দেওয়া যায়
         }
     </script>
 
