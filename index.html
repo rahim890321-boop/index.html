@@ -1,132 +1,219 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Task Platform with PayPal</title>
-<!-- Firebase -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Platform - Live</title>
+
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <!-- PayPal SDK -->
 <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
 
 <style>
-body{font-family:Arial,sans-serif;background:#f7f7f7;margin:0;padding:0;}
-.container{max-width:800px;margin:20px auto;background:#fff;padding:20px;border-radius:10px;}
-button{padding:10px 20px;margin:5px;border:none;border-radius:8px;cursor:pointer;}
+body { font-family: Arial, sans-serif; background:#f0f0f0; margin:0; padding:0; }
+.container { max-width:900px; margin:20px auto; background:#fff; padding:20px; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.2); }
+h2,h3 { color:#333; text-align:center; }
+input, select { padding:10px; margin:5px 0; width:100%; border-radius:8px; border:1px solid #ccc; }
+button { padding:10px 20px; margin:5px 0; border:none; border-radius:10px; cursor:pointer; font-weight:bold; }
+button#submit-btn{background:#007bff;color:#fff;width:100%;}
+.progress{height:20px;background:#ddd;border-radius:10px;overflow:hidden;margin-top:15px;}
+.progress-bar{height:100%;width:0%;background:#007bff;text-align:center;color:#fff;line-height:20px;}
+.admin-panel{margin-top:30px;}
+.admin-panel table{width:100%;border-collapse:collapse;}
+.admin-panel th, .admin-panel td{border:1px solid #ccc;padding:8px;text-align:center;}
+.admin-panel th{background:#007bff;color:#fff;}
+#paypal-button-container{margin-top:15px;}
 </style>
 </head>
 <body>
 
-<div class="container" id="auth-box">
+<!-- AUTH -->
+<div class="container auth-container">
   <h2>Login / Signup</h2>
-  <input type="email" id="email" placeholder="Email"><br>
-  <input type="password" id="password" placeholder="Password"><br>
-  <select id="role"><option value="worker">Worker</option><option value="admin">Admin</option></select><br>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <select id="role">
+    <option value="worker">Worker</option>
+    <option value="admin">Admin</option>
+  </select>
   <button onclick="signup()">Sign Up</button>
   <button onclick="login()">Login</button>
 </div>
 
-<div class="container" id="worker-box" style="display:none;">
+<!-- WORKER PAGE -->
+<div class="container" id="worker-container" style="display:none;">
   <h2>Worker Task Page</h2>
-  <p id="task-text"></p>
-  <button onclick="selectChoice('Valid')">Valid</button>
-  <button onclick="selectChoice('Invalid')">Invalid</button>
-  <button onclick="selectChoice('Suspicious')">Suspicious</button><br>
-  <button onclick="submitChoice()">Submit</button>
+  <p id="survey-text"></p>
+  <div class="buttons">
+    <button onclick="selectChoice('Valid')">✅ Valid</button>
+    <button onclick="selectChoice('Invalid')">❌ Invalid</button>
+    <button onclick="selectChoice('Suspicious')">⚠ Suspicious</button>
+  </div>
+  <button id="submit-btn" onclick="submitTask()">Submit & Next</button>
+  <div class="progress">
+    <div class="progress-bar" id="progress-bar">0%</div>
+  </div>
   <div id="paypal-button-container"></div>
 </div>
 
-<div class="container" id="admin-box" style="display:none;">
+<!-- ADMIN PAGE -->
+<div class="container admin-panel" id="admin-container" style="display:none;">
   <h2>Admin Panel</h2>
-  <input type="text" id="new-task" placeholder="New Task"><button onclick="addTask()">Add Task</button>
-  <div id="results"></div>
+  <input type="text" id="new-task" placeholder="New Task Text">
+  <button onclick="addTask()">Add Task</button>
+  <table id="tasks-table">
+    <thead><tr><th>Task</th><th>Delete</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <h3>Results & Payment</h3>
+  <table id="results-table">
+    <thead><tr><th>Task</th><th>Worker Choice</th><th>Your 40%</th><th>User 60%</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <p id="summary"></p>
 </div>
 
 <script>
-// -------- Firebase Config --------
+// 🔹 Firebase Config
 const firebaseConfig = {
-  apiKey: "AIzaSyXXXXXXX",
-  authDomain: "your-app.firebaseapp.com",
-  projectId: "your-app",
-  storageBucket: "your-app.appspot.com",
-  messagingSenderId: "123456",
-  appId: "1:123456:web:abcd"
+  apiKey: "AIzaSyXXXXXXX-XXXXXX",
+  authDomain: "taskplatform.firebaseapp.com",
+  projectId: "taskplatform",
+  storageBucket: "taskplatform.appspot.com",
+  messagingSenderId: "1234567890",
+  appId: "1:1234567890:web:abcdef123456"
 };
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
 const db = firebase.firestore();
+const auth = firebase.auth();
 
-// -------- Auth --------
+// 🔹 Global Variables
+let currentTask = 0, selectedChoice = "";
+let tasks = [], results = [];
+let currentUserEmail="";
+
+// 🔹 Authentication
 function signup(){
-  const email = emailEl.value;
-  const pass  = passwordEl.value;
-  const role  = roleEl.value;
-  auth.createUserWithEmailAndPassword(email,pass)
-    .then(u=>db.collection("users").doc(u.user.uid).set({email,role,balance:0}));
+  const email=document.getElementById('email').value;
+  const password=document.getElementById('password').value;
+  const role=document.getElementById('role').value;
+  auth.createUserWithEmailAndPassword(email,password)
+    .then(cred=>db.collection('users').doc(cred.user.uid).set({email,role}))
+    .then(()=>alert("User created successfully!"))
+    .catch(err=>alert(err.message));
 }
+
 function login(){
-  auth.signInWithEmailAndPassword(emailEl.value,passwordEl.value)
-    .then(u=>{
-      db.collection("users").doc(u.user.uid).get().then(doc=>{
-        if(doc.data().role=="admin") showAdmin(); else showWorker();
+  const email=document.getElementById('email').value;
+  const password=document.getElementById('password').value;
+  auth.signInWithEmailAndPassword(email,password)
+    .then(cred=>{
+      db.collection('users').doc(cred.user.uid).get().then(doc=>{
+        const role=doc.data().role;
+        currentUserEmail=email;
+        document.querySelector('.auth-container').style.display='none';
+        if(role==='admin'){document.getElementById('admin-container').style.display='block'; loadTasks(); loadResults();}
+        else{document.getElementById('worker-container').style.display='block'; loadTasksWorker();}
       });
-    });
+    })
+    .catch(err=>alert(err.message));
 }
 
-// -------- Worker --------
-let chosen = "";
-function selectChoice(c){chosen=c;}
+// 🔹 Worker Functions
+function loadTasksWorker(){
+  db.collection('tasks').get().then(snapshot=>{
+    tasks = snapshot.docs.map(doc=>({id:doc.id,text:doc.data().text}));
+    currentTask=0; loadTask();
+  });
+}
+
 function loadTask(){
-  db.collection("tasks").limit(1).get().then(s=>{
-    if(s.empty){taskEl.innerText="No tasks!";return;}
-    const t = s.docs[0].data();
-    taskEl.innerText = t.text;
-  });
-}
-function submitChoice(){
-  if(!chosen) return alert("Select!");
-  db.collection("results").add({text:taskEl.innerText,choice:chosen,userShare:60,ownerShare:40,paid:false});
-  loadTask();
-}
-function showWorker(){
-  authBox.style.display="none";
-  workerBox.style.display="block";
-  loadTask();
-  renderPayPal();
-}
-function renderPayPal(){
-  db.collection("results").where("paid","==",false).get().then(snap=>{
-    let total=0;
-    snap.forEach(doc=> total += doc.data().userShare);
-    if(total>0){
-      paypal.Buttons({
-        createOrder:(data,actions)=> actions.order.create({purchase_units:[{amount:{value:total}}]}),
-        onApprove:(data,actions)=>actions.order.capture().then(details=>{
-          alert("Paid "+details.purchase_units[0].amount.value);
-          snap.forEach(doci=>doci.ref.update({paid:true}));
-        })
-      }).render("#paypal-button-container");
-    }
-  });
+  if(currentTask<tasks.length){
+    document.getElementById('survey-text').innerText = tasks[currentTask].text;
+    selectedChoice="";
+  } else {
+    document.getElementById('survey-text').innerText="All tasks completed! 🎉";
+    document.querySelector('.buttons').style.display='none';
+    document.getElementById('submit-btn').style.display='none';
+    renderPayPal();
+  }
+  updateProgress();
 }
 
-// -------- Admin --------
-function showAdmin(){
-  authBox.style.display="none";
-  adminBox.style.display="block";
-  db.collection("results").onSnapshot(s=>{
-    let html="";
-    s.forEach(doc=>html += `<p>${doc.data().text} -> ${doc.data().choice}</p>`);
-    resultsEl.innerHTML = html;
-  });
+function selectChoice(choice){selectedChoice=choice;}
+
+function submitTask(){
+  if(selectedChoice===""){alert("Select an option!"); return;}
+  const userShare=60, ownerShare=40;
+  db.collection('results').add({taskId:tasks[currentTask].id,taskText:tasks[currentTask].text,choice:selectedChoice,userShare,ownerShare,timestamp:new Date(),paid:false})
+  .then(()=>{currentTask++; loadTask(); loadResults();});
 }
+
+function updateProgress(){
+  const percent=Math.round((currentTask/tasks.length)*100);
+  const bar=document.getElementById('progress-bar');
+  bar.style.width=percent+"%";
+  bar.innerText=percent+"%";
+}
+
+// 🔹 Admin Functions
 function addTask(){
-  db.collection("tasks").add({text:newTaskEl.value});
+  const text=document.getElementById('new-task').value;
+  if(text===""){alert("Enter task!"); return;}
+  db.collection('tasks').add({text,createdAt:new Date()}).then(()=>{document.getElementById('new-task').value=''; loadTasks();});
 }
 
-</script>
+function loadTasks(){
+  db.collection('tasks').get().then(snapshot=>{
+    const tbody=document.getElementById('tasks-table').querySelector('tbody');
+    tbody.innerHTML="";
+    snapshot.forEach(doc=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${doc.data().text}</td><td><button onclick="deleteTask('${doc.id}')">Delete</button></td>`;
+      tbody.appendChild(tr);
+    });
+  });
+}
 
+function deleteTask(id){db.collection('tasks').doc(id).delete().then(loadTasks);}
+
+function loadResults(){
+  db.collection('results').get().then(snapshot=>{
+    results=snapshot.docs.map(doc=>doc.data());
+    updateAdmin();
+  });
+}
+
+function updateAdmin(){
+  const tbody=document.getElementById('results-table').querySelector('tbody');
+  tbody.innerHTML=""; let totalUser=0,totalOwner=0;
+  results.forEach(r=>{
+    tbody.innerHTML+=`<tr><td>${r.taskText}</td><td>${r.choice}</td><td>$${r.ownerShare}</td><td>$${r.userShare}</td></tr>`;
+    totalUser+=r.userShare; totalOwner+=r.ownerShare;
+  });
+  document.getElementById('summary').innerText=`Total Payment: You $${totalOwner} | Users $${totalUser}`;
+}
+
+// 🔹 PayPal Button for Worker Payment
+function renderPayPal(){
+  const unpaidTasks = results.filter(r=>!r.paid);
+  const totalAmount = unpaidTasks.reduce((acc,r)=>acc+r.userShare,0);
+  if(totalAmount<=0)return;
+  paypal.Buttons({
+    createOrder:function(data,actions){return actions.order.create({purchase_units:[{amount:{value:totalAmount}}]});},
+    onApprove:function(data,actions){return actions.order.capture().then(details=>{
+      alert('Payment Successful!');
+
+      unpaidTasks.forEach(task=>{
+        db.collection('results').doc(task.taskId).update({paid:true,paymentDetails:details});
+      });
+    })
+  }).render('#paypal-button-container');
+}
+</script>
 </body>
-</html>
+  </html>
